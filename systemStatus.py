@@ -19,11 +19,13 @@ def help():
 	print(f'''\t -m | --memory: \tprint memory section''')
 	print(f'''\t -d | --disk: \t\tprint disk section''')
 	print(f'''\t -n | --network: \tprint network section''')
-	print(f'''\t -p | --process: \tprint process section''')
+	#print(f'''\t -p | --process: \tprint process section''')
 	print(f'''\t -r | --resume: \tprint resume''')
 	print(f'''\t -a | --all: \t\tprint all''')
 	print(f'''\t -u | --update: \tenable autoupdate''')
 	print(f'''\t -t | --time: \t\tspecify time of refresh ( > 0 )''')
+	print(f'''\t -s | --sensor: \t\tcheck CPUs Temperatures''')
+	print(f'''\t -b | --boot: \t\tget boot time''')
 	print(f'''\t -h | --help: \t\tprint this help''')
 
 def format_memory(size: int)->str:
@@ -50,16 +52,6 @@ def format_memory(size: int)->str:
 		str_size+=" Tb"
 	
 	return str_size
-
-
-def resume():
-	perc_cpu    = psutil.cpu_percent(interval = 1, percpu=True)
-	mem_virt    = int(psutil.virtual_memory().used / (1024 ** 2))
-	avail_mem   = int(psutil.virtual_memory().available * 100 / psutil.virtual_memory().total)
-	print(f'''Estado actual del PC:
-		  La CPU está al {perc_cpu}%
-		  Usando {mem_virt} Mb de la memoria
-		  Quedando {avail_mem}% memoria libre''')
 
 def memory()->str:
 	mem_virt        = psutil.virtual_memory().used
@@ -183,13 +175,54 @@ def network()->str:
 
 	return net_status
 
-def process()->str:
-	proc_status = ""
-	return proc_status
+#TODO: proces
+#def process()->str:
+#	proc_status = ""
+#	return proc_status
 
-def all()->str:
+def sensors()->str:
+	sensor_status = f''' Sensors:\n'''
+	sensors_temperatura = psutil.sensors_temperatures(fahrenheit=False)
+	for sensor_temp in sensors_temperatura:
+		#print(sensor[1])
+		temperatura = sensors_temperatura[sensor_temp]
+		for item in temperatura:
+			if item.label.startswith("Core"):
+				sensor_status+=f'''\t{item.label} current: {item.current}º C , high: {item.high}º C critical: {item.critical}º C\n'''
+
+	#TODO cuando tenga un portatil
+	#sensors_bateria = psutil.sensors_battery()
+	#if sensors_bateria != None:
+	#	print(sensors_bateria.percet)
+	return sensor_status
+
+def boot()->str:
+	boot_status = ""
+	boot_time = datetime.datetime.fromtimestamp(psutil.boot_time()).strftime("%Y-%m-%d %H:%M:%S")
+	boot_status = f''' Boot time:\n'''
+	boot_status+= f'''\t{boot_time}'''
+	return boot_status
+
+def all(intervalo_cpu: int = 1)->str:
 	all = ""
+	all+=cpu(intervalo = intervalo_cpu)
+	all+=memory()
+	all+=disk()
+	all+=network()
+	all+=sensors()
+	all+=boot()
 	return all
+
+def resume(intervalo_cpu: int = 1):
+	resumen = ""
+	resumen+=cpu(intervalo = intervalo_cpu)
+	resumen+=memory()
+	#resumen+=disk()
+	#resumen+=network()
+	resumen+=sensors()
+	resumen+=boot()
+	return resumen
+
 
 def main():
 	argv = sys.argv[1:]
@@ -209,11 +242,21 @@ def main():
 	exec_auto_update = False
 	resume_status =""
 	exec_resume = False
+	exec_sensor = False
+	sensor_status = ""
+	exec_boot = False
+	boot_status = ""
 	global_status  = ""
 	refresh_time = -1
 	intervalo_cpu = 1
 
-	opts, args = getopt.getopt(argv,"hrcmdnpaut:",["help","resume","cpu","memory","disk","network","process","all","update","time="])
+	try:
+		#opts, args = getopt.getopt(argv,"hrcmdnpaut:sb",["help","resume","cpu","memory","disk","network","process","all","update","time=","sensor","boot"])
+		opts, args = getopt.getopt(argv,"hrcmdnaut:sb",["help","resume","cpu","memory","disk","network","all","update","time=","sensor","boot"])
+	except getopt.GetoptError:
+		print("Error al parsear los parámetros.")
+		sys.exit(1)
+	
 	for opt, arg in opts:
 		if opt in ("-h", "--help"):
 			help()
@@ -228,8 +271,8 @@ def main():
 			exec_disk_status = True
 		elif opt in ("-n","--network"):
 			exec_net_status = True
-		elif opt in ("-p","--process"):
-			exec_proc_status = True
+		#elif opt in ("-p","--process"):
+		#	exec_proc_status = True
 		elif opt in ("-a","--all"):
 			exec_all_status = True
 		elif opt in ("-t","--time"):
@@ -237,6 +280,12 @@ def main():
 				refresh_time = float(arg)
 		elif opt in ("-u","--update"):
 			exec_auto_update = True
+		elif opt in ("-s","--sensor"):
+			exec_sensor = True
+		elif opt in ("-b","--boot"):
+			exec_boot = True
+		else:
+			pass
 
 	while(True):
 		if refresh_time > 1:
@@ -246,12 +295,22 @@ def main():
 		timestamp = f'''{datetime.datetime.now().day:02d}/{datetime.datetime.now().month:02d}/{datetime.datetime.now().year:04d} {datetime.datetime.now().hour:02d}:{datetime.datetime.now().minute:02d}:{datetime.datetime.now().second:02d}'''
 		if exec_resume == True:
 			resume_status = resume()
-			print(resume_status)
-			continue
+			global_status+= resume_status
+			print(f'''\nEstado actual ({timestamp}) *************************************************''')
+			print(global_status)
+			if exec_auto_update == False:
+				break
+			else:
+				continue
 		if exec_all_status == True:
 			all_status = all()
-			print(all_status)
-			continue
+			global_status+= all_status
+			print(f'''\nEstado actual ({timestamp}) *************************************************''')
+			print(global_status)
+			if exec_auto_update == False:
+				break
+			else:
+				continue
 		if exec_cpu_status == True:
 			cpu_status = cpu(intervalo = intervalo_cpu)
 			global_status+= cpu_status
@@ -264,9 +323,15 @@ def main():
 		if exec_net_status == True:
 			net_status = network()
 			global_status+= net_status
-		if exec_proc_status == True:
-			proc_status = process()
-			global_status+= proc_status
+		#if exec_proc_status == True:
+		#	proc_status = process()
+		#	global_status+= proc_status
+		if exec_sensor == True:
+			sensor_status = sensors()
+			global_status+= sensor_status
+		if exec_boot == True:
+			boot_status = boot()
+			global_status+= boot_status
 
 		print(f'''\nEstado actual ({timestamp}) *************************************************''')
 		print(global_status)
