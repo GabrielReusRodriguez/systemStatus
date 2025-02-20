@@ -24,7 +24,7 @@ def help():
 	print(f'''\t -a | --all: \t\tprint all''')
 	print(f'''\t -u | --update: \tenable autoupdate''')
 	print(f'''\t -t | --time: \t\tspecify time of refresh ( > 0 )''')
-	print(f'''\t -s | --sensor: \t\tcheck CPUs Temperatures''')
+	print(f'''\t -s | --sensor: \tcheck CPUs Temperatures''')
 	print(f'''\t -b | --boot: \t\tget boot time''')
 	print(f'''\t -h | --help: \t\tprint this help''')
 
@@ -184,16 +184,18 @@ def sensors()->str:
 	sensor_status = f''' Sensors:\n'''
 	sensors_temperatura = psutil.sensors_temperatures(fahrenheit=False)
 	for sensor_temp in sensors_temperatura:
-		#print(sensor[1])
 		temperatura = sensors_temperatura[sensor_temp]
 		for item in temperatura:
-			if item.label.startswith("Core"):
-				sensor_status+=f'''\t{item.label} current: {item.current}º C , high: {item.high}º C critical: {item.critical}º C\n'''
+			#if item.label.startswith("Core"):
+			if item.label != '':
+				sensor_status+=f'''\t{item.label}:\n'''
+				sensor_status+=f'''\t\tcurrent: {item.current}º C,\thigh: {item.high}º C,\tcritical: {item.critical}º C\n'''
 
 	#TODO cuando tenga un portatil
-	#sensors_bateria = psutil.sensors_battery()
-	#if sensors_bateria != None:
-	#	print(sensors_bateria.percet)
+	sensors_bateria = psutil.sensors_battery()
+	if sensors_bateria != None:
+#		print(sensors_bateria.percent)
+		sensor_status+=f'''\tbatery charge:\n\t\t{sensors_bateria.percent}%\n'''
 	return sensor_status
 
 def boot()->str:
