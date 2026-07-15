@@ -24,6 +24,7 @@ from cpuHandler import (
     format_cpu_info_lineas,
     format_cpu_usage_lineas,
 )
+from ramHandler import get_ram_info, format_ram_info_lineas
 
 
 def parse_args():
@@ -148,6 +149,10 @@ def main():
         info_cpu = get_cpu_info()
         lineas_info = format_cpu_info_lineas(info_cpu)
 
+        # Obtener información estática de la RAM (RF-003)
+        info_ram = get_ram_info()
+        lineas_ram = format_ram_info_lineas(info_ram)
+
         # Inicializar medidor de uso (primera lectura retorna 0)
         init_cpu_usage()
         time.sleep(0.1)
@@ -160,8 +165,10 @@ def main():
         usos_cores = get_per_core_usage()
         lineas_uso = format_cpu_usage_lineas(uso_total, usos_cores, ancho_barra)
 
-        # Combinar: info + 2 líneas en blanco (RNF-007) + uso
-        lineas_completas = lineas_info + ['', ''] + lineas_uso
+        # Combinar: CPU info + separator + CPU uso + separator + RAM info (RNF-007)
+        lineas_completas = (
+            lineas_info + ['', ''] + lineas_uso + ['', ''] + lineas_ram
+        )
         display.update(lineas_completas)
 
         # Bucle principal
@@ -181,7 +188,9 @@ def main():
             lineas_uso = format_cpu_usage_lineas(uso_total, usos_cores, ancho_barra)
 
             # Combinar y actualizar solo lo que cambió
-            lineas_completas = lineas_info + ['', ''] + lineas_uso
+            lineas_completas = (
+                lineas_info + ['', ''] + lineas_uso + ['', ''] + lineas_ram
+            )
             display.update(lineas_completas)
 
     except KeyboardInterrupt:
