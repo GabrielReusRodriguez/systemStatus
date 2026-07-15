@@ -1,0 +1,7 @@
+[FORMAT]
+# Permitir camelCase en nombres de ficheros según spec del proyecto
+module-naming-style=any
+
+[MESSAGES CONTROL]
+# Desactivar advertencias que no aplican a este proyecto
+disable=C0114,C0115,C0116
